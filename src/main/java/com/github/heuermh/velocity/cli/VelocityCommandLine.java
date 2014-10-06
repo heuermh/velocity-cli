@@ -26,6 +26,8 @@ import java.io.Writer;
 
 import com.google.common.base.Splitter;
 
+import com.google.common.collect.Maps;
+
 import org.apache.velocity.VelocityContext;
 
 import org.apache.velocity.app.VelocityEngine;
@@ -72,7 +74,7 @@ public final class VelocityCommandLine implements Runnable {
         this.templateFile = templateFile;
         this.outputFile = outputFile;
 
-        velocityContext = new VelocityContext(Splitter.on(",").withKeyValueSeparator("=").split(context));
+        velocityContext = new VelocityContext(Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context)));
 
         velocityEngine = new VelocityEngine();
         //Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, this);
