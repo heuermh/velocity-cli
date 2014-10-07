@@ -25,7 +25,7 @@
   </parent>
   <groupId>com.github.heuermh.velocity</groupId>
   <artifactId>velocity-cli</artifactId>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.0.1</version>
   <packaging>jar</packaging>
 
   <name>velocity-cli</name>
@@ -36,7 +36,7 @@
     <connection>scm:git:git@github.com:heuermh/velocity-cli.git</connection>
     <developerConnection>scm:git:git@github.com:heuermh/velocity-cli.git</developerConnection>
     <url>git@github.com:heuermh/velocity-cli.git</url>
-    <tag>HEAD</tag>
+    <tag>velocity-cli-1.0.1</tag>
   </scm>
   <licenses>
     <license>
