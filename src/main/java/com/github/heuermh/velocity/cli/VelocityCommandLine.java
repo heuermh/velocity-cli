@@ -110,16 +110,21 @@ public final class VelocityCommandLine implements Runnable {
      * @param args command line arguments
      */
     public static void main(final String[] args) {
+        Switch about = new Switch("a", "about", "display about message");
         Switch help = new Switch("h", "help", "display help message");
         StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", true);
         FileArgument templateFile = new FileArgument("t", "template", "template file", true);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
 
-        ArgumentList arguments = new ArgumentList(help, context, templateFile, outputFile);
+        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile);
         CommandLine commandLine = new CommandLine(args);
         try
         {
             CommandLineParser.parse(commandLine, arguments);
+            if (about.wasFound()) {
+                About.about(System.out);
+                System.exit(0);
+            }
             if (help.wasFound()) {
                 Usage.usage(USAGE, null, commandLine, arguments, System.out);
                 System.exit(-2);
@@ -127,6 +132,14 @@ public final class VelocityCommandLine implements Runnable {
             new VelocityCommandLine(context.getValue(), templateFile.getValue(), outputFile.getValue()).run();
         }
         catch (CommandLineParseException e) {
+            if (about.wasFound()) {
+                About.about(System.out);
+                System.exit(0);
+            }
+            if (help.wasFound()) {
+                Usage.usage(USAGE, null, commandLine, arguments, System.out);
+                System.exit(0);
+            }
             Usage.usage(USAGE, e, commandLine, arguments, System.err);
             System.exit(-1);
         }
