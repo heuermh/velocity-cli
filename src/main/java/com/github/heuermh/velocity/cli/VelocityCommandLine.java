@@ -26,26 +26,23 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import com.google.common.base.Splitter;
-
-import com.google.common.collect.Maps;
+import java.util.regex.Pattern;
 
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.log.JdkLogChute;
 import org.apache.velocity.tools.generic.EscapeTool;
-
 import org.dishevelled.commandline.ArgumentList;
 import org.dishevelled.commandline.CommandLine;
 import org.dishevelled.commandline.CommandLineParseException;
 import org.dishevelled.commandline.CommandLineParser;
 import org.dishevelled.commandline.Switch;
 import org.dishevelled.commandline.Usage;
-
 import org.dishevelled.commandline.argument.FileArgument;
 import org.dishevelled.commandline.argument.StringArgument;
 
@@ -53,6 +50,7 @@ import org.dishevelled.commandline.argument.StringArgument;
  * Command line interface to Apache Velocity.
  */
 public final class VelocityCommandLine implements Runnable {
+
     /** Input template file. */
     private final File templateFile;
 
@@ -93,7 +91,18 @@ public final class VelocityCommandLine implements Runnable {
         this.charset = charset;
         this.escapetool = escapetool;
 
-        velocityContext = new VelocityContext(Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context)));
+        final Pattern comma = literalPattern(",");
+        final Pattern equals = literalPattern("=");
+
+        final HashMap<String, String> contextMap = comma.splitAsStream(context)
+                .collect(HashMap<String, String>::new,
+                        (m, e) -> {
+                            String[] s = equals.split(e);
+                            m.put(s[0], s[1]);
+                        },
+                        (m, n) -> m.putAll(n));
+
+        velocityContext = new VelocityContext(refineContext(contextMap));
         if (escapetool != null) {
             velocityContext.put(escapetool, new EscapeTool());
         }
@@ -103,6 +112,33 @@ public final class VelocityCommandLine implements Runnable {
         velocityEngine.init();
     }
 
+    /** Convert {@code {foo.bar=a,foo.baz=b}} to {@code {foo.{bar=a,baz=b}}}. */
+    static Map<String, Object> refineContext(Map<String, String> context) {
+        Map<String, Object> result = new HashMap<>();
+        Pattern dot = literalPattern(".");
+        context.entrySet().forEach(e -> {
+            String key = e.getKey();
+            String value = e.getValue();
+
+            Map<String, Object> m = result;
+            String[] parts = dot.split(key);
+            for (int i = 0; i < parts.length - 1; i++) {
+                String part = parts[i];
+                Object o = m.computeIfAbsent(part, __ -> new HashMap<>());
+                if (o instanceof Map) {
+                    m = (Map) o;
+                } else {
+                    throw new IllegalStateException("unexpected " + o);
+                }
+            }
+            m.put(parts[parts.length - 1], value);
+        });
+        return result;
+    }
+
+    private static Pattern literalPattern(String s) {
+        return Pattern.compile(s, Pattern.LITERAL);
+    }
 
     @Override
     public void run() {
