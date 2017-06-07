@@ -34,6 +34,8 @@ import org.apache.velocity.VelocityContext;
 
 import org.apache.velocity.app.VelocityEngine;
 
+import org.apache.velocity.tools.generic.EscapeTool;
+
 import org.dishevelled.commandline.ArgumentList;
 import org.dishevelled.commandline.CommandLine;
 import org.dishevelled.commandline.CommandLineParseException;
@@ -57,6 +59,9 @@ public final class VelocityCommandLine implements Runnable {
     /** Encoding. */
     private final Charset charset;
 
+    /** Escapetool. */
+    private final String escapetool;
+
     /** Velocity context. */
     private final VelocityContext velocityContext;
 
@@ -64,7 +69,7 @@ public final class VelocityCommandLine implements Runnable {
     private final VelocityEngine velocityEngine;
 
     /** Usage string. */
-    private static final String USAGE = "java VelocityCommandLine -c foo=bar -t template.vm [-o output.txt] [-e encoding]";
+    private static final String USAGE = "java VelocityCommandLine -c foo=bar -t template.vm [-o output.txt] [-e encoding] [-x escapetool]";
 
 
     /**
@@ -74,16 +79,20 @@ public final class VelocityCommandLine implements Runnable {
      * @param templateFile input template file, must not be null
      * @param outputFile output file
      * @param charset charset, must not be null
+     * @param escapetool escapetool
      */
-    public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset) {
+    public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset, final String escapetool) {
         checkNotNull(context);
         checkNotNull(templateFile);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
+        this.escapetool = escapetool;
 
         velocityContext = new VelocityContext(Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context)));
-
+        if (escapetool != null) {
+            velocityContext.put(escapetool, new EscapeTool());
+        }
         velocityEngine = new VelocityEngine();
         //Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, this);
         velocityEngine.init();
@@ -124,8 +133,9 @@ public final class VelocityCommandLine implements Runnable {
         FileArgument templateFile = new FileArgument("t", "template", "template file", true);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
         StringArgument encoding = new StringArgument("e", "encoding", "encoding, default utf-8", false);
+        StringArgument escapeTool = new StringArgument("x", "escapetool", "add escapetool into context", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile, encoding);
+        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile, encoding, escapeTool);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -150,7 +160,7 @@ public final class VelocityCommandLine implements Runnable {
             } else {
                 cs = StandardCharsets.UTF_8;
             }
-            new VelocityCommandLine(context.getValue(), templateFile.getValue(), outputFile.getValue(), cs).run();
+            new VelocityCommandLine(context.getValue(), templateFile.getValue(), outputFile.getValue(), cs, escapeTool.getValue()).run();
         }
         catch (CommandLineParseException e) {
             if (about.wasFound()) {

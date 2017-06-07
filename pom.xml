@@ -257,6 +257,11 @@
         <version>1.7</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.velocity</groupId>
+        <artifactId>velocity-tools</artifactId>
+        <version>2.0</version>
+      </dependency>
+      <dependency>
         <groupId>org.dishevelled</groupId>
         <artifactId>dsh-commandline</artifactId>
         <version>1.1</version>
@@ -277,6 +282,11 @@
     <dependency>
       <groupId>org.apache.velocity</groupId>
       <artifactId>velocity</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.velocity</groupId>
+      <artifactId>velocity-tools</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
