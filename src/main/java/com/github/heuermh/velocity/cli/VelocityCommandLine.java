@@ -25,15 +25,17 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.google.common.base.Splitter;
 
 import com.google.common.collect.Maps;
 
 import org.apache.velocity.VelocityContext;
-
+import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
-
+import org.apache.velocity.runtime.log.JdkLogChute;
 import org.apache.velocity.tools.generic.EscapeTool;
 
 import org.dishevelled.commandline.ArgumentList;
@@ -71,6 +73,7 @@ public final class VelocityCommandLine implements Runnable {
     /** Usage string. */
     private static final String USAGE = "java VelocityCommandLine -c foo=bar -t template.vm [-o output.txt] [-e encoding] [-x escapetool]";
 
+    private static final Logger LOG = Logger.getLogger(VelocityCommandLine.class.getName());
 
     /**
      * Create a new command line interface to Apache Velocity.
@@ -93,8 +96,9 @@ public final class VelocityCommandLine implements Runnable {
         if (escapetool != null) {
             velocityContext.put(escapetool, new EscapeTool());
         }
+
         velocityEngine = new VelocityEngine();
-        //Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, this);
+        Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, JdkLogChute.class);
         velocityEngine.init();
     }
 
@@ -107,7 +111,7 @@ public final class VelocityCommandLine implements Runnable {
             velocityEngine.mergeTemplate(templateFile.getName(), charset.name(), velocityContext, writer);
         }
         catch (IOException e) {
-            e.printStackTrace();
+            LOG.log(Level.SEVERE, "Error when merging templeate:", e);
             System.exit(1);
         }
         finally {
@@ -154,6 +158,8 @@ public final class VelocityCommandLine implements Runnable {
                 if (Charset.isSupported(encodingValue)) {
                     cs = Charset.forName(encodingValue);
                 } else {
+                    LOG.severe(() -> "Unknown encoding " + encodingValue);
+                    LOG.severe(() -> "Supported encodings " + Charset.availableCharsets().values());
                     System.exit(-1);
                     throw new AssertionError();
                 }
