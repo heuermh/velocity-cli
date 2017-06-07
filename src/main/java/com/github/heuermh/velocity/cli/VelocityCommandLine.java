@@ -19,7 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -105,25 +106,20 @@ public final class VelocityCommandLine implements Runnable {
 
     @Override
     public void run() {
-        Writer writer = null;
-        try {
-            writer = (outputFile == null) ? new BufferedWriter(new OutputStreamWriter(System.out)) : new BufferedWriter(new FileWriter(outputFile));
+        try (Writer writer = writer(outputFile, charset)) {
             velocityEngine.mergeTemplate(templateFile.getName(), charset.name(), velocityContext, writer);
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             LOG.log(Level.SEVERE, "Error when merging templeate:", e);
             System.exit(1);
         }
-        finally {
-            try {
-                writer.close();
-            }
-            catch (Exception e) {
-                // ignored
-            }
-        }
     }
 
+    private static Writer writer(File outputFile, Charset charset) throws FileNotFoundException {
+        return new BufferedWriter(new OutputStreamWriter(
+                (outputFile == null)
+                        ? System.out
+                        : new FileOutputStream(outputFile), charset.newEncoder()));
+    }
 
     /**
      * Main.
