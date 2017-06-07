@@ -23,6 +23,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import com.google.common.base.Splitter;
 
@@ -52,6 +54,9 @@ public final class VelocityCommandLine implements Runnable {
     /** Output file. */
     private final File outputFile;
 
+    /** Encoding. */
+    private final Charset charset;
+
     /** Velocity context. */
     private final VelocityContext velocityContext;
 
@@ -59,20 +64,23 @@ public final class VelocityCommandLine implements Runnable {
     private final VelocityEngine velocityEngine;
 
     /** Usage string. */
-    private static final String USAGE = "java VelocityCommandLine -c foo=bar -t template.wm [-o output.txt]";
+    private static final String USAGE = "java VelocityCommandLine -c foo=bar -t template.vm [-o output.txt] [-e encoding]";
 
 
     /**
      * Create a new command line interface to Apache Velocity.
      *
      * @param context context, must not be null
-     * @param templateFile input template file
+     * @param templateFile input template file, must not be null
      * @param outputFile output file
+     * @param charset charset, must not be null
      */
-    public VelocityCommandLine(final String context, final File templateFile, final File outputFile) {
+    public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset) {
         checkNotNull(context);
+        checkNotNull(templateFile);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
+        this.charset = charset;
 
         velocityContext = new VelocityContext(Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context)));
 
@@ -87,7 +95,7 @@ public final class VelocityCommandLine implements Runnable {
         Writer writer = null;
         try {
             writer = (outputFile == null) ? new BufferedWriter(new OutputStreamWriter(System.out)) : new BufferedWriter(new FileWriter(outputFile));
-            velocityEngine.mergeTemplate(templateFile.getName(), "UTF-8", velocityContext, writer);
+            velocityEngine.mergeTemplate(templateFile.getName(), charset.name(), velocityContext, writer);
         }
         catch (IOException e) {
             e.printStackTrace();
@@ -115,8 +123,9 @@ public final class VelocityCommandLine implements Runnable {
         StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", true);
         FileArgument templateFile = new FileArgument("t", "template", "template file", true);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
+        StringArgument encoding = new StringArgument("e", "encoding", "encoding, default utf-8", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile);
+        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile, encoding);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -129,7 +138,19 @@ public final class VelocityCommandLine implements Runnable {
                 Usage.usage(USAGE, null, commandLine, arguments, System.out);
                 System.exit(-2);
             }
-            new VelocityCommandLine(context.getValue(), templateFile.getValue(), outputFile.getValue()).run();
+            Charset cs;
+            if (encoding.wasFound()) {
+                final String encodingValue = encoding.getValue();
+                if (Charset.isSupported(encodingValue)) {
+                    cs = Charset.forName(encodingValue);
+                } else {
+                    System.exit(-1);
+                    throw new AssertionError();
+                }
+            } else {
+                cs = StandardCharsets.UTF_8;
+            }
+            new VelocityCommandLine(context.getValue(), templateFile.getValue(), outputFile.getValue(), cs).run();
         }
         catch (CommandLineParseException e) {
             if (about.wasFound()) {
