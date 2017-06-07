@@ -15,7 +15,7 @@
  */
 package com.github.heuermh.velocity.cli;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.PrintStream;
 
@@ -111,7 +111,7 @@ final class About {
      * @param out print stream to write about text to
      */
     public static void about(final PrintStream out) {
-        checkNotNull(out);
+        requireNonNull(out);
         out.print(new About().toString());
     }
 }

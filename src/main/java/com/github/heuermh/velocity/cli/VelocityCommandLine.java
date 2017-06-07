@@ -15,7 +15,7 @@
  */
 package com.github.heuermh.velocity.cli;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -82,8 +82,8 @@ public final class VelocityCommandLine implements Runnable {
      * @param escapetool escapetool
      */
     public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset, final String escapetool) {
-        checkNotNull(context);
-        checkNotNull(templateFile);
+        requireNonNull(context);
+        requireNonNull(templateFile);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
