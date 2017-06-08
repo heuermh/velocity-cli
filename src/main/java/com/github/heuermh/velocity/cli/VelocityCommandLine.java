@@ -30,13 +30,16 @@ import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.function.Consumer;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
+import javax.annotation.Nonnull;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
@@ -89,7 +92,10 @@ public final class VelocityCommandLine implements Runnable {
      * @param properties
      * @param propertiesName propertiesName, must not be null
      */
-    public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset, final String escapetool, final Properties properties, final String propertiesName) {
+    public VelocityCommandLine(final @Nonnull String context, 
+            final @Nonnull File templateFile, final File outputFile, 
+            final @Nonnull Charset charset, final String escapetool,
+            final Properties properties, final @Nonnull String propertiesName) {
         requireNonNull(context);
         requireNonNull(templateFile);
         requireNonNull(charset);
