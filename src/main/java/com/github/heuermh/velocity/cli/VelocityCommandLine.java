@@ -92,6 +92,7 @@ public final class VelocityCommandLine implements Runnable {
     public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset, final String escapetool, final Properties properties, final String propertiesName) {
         requireNonNull(context);
         requireNonNull(templateFile);
+        requireNonNull(charset);
         requireNonNull(propertiesName);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
@@ -99,7 +100,7 @@ public final class VelocityCommandLine implements Runnable {
 
         final Pattern comma = literalPattern(",");
         final Pattern equals = literalPattern("=");
-
+        
         final HashMap<String, String> contextMap = comma.splitAsStream(context)
                 .collect(HashMap<String, String>::new,
                         (m, e) -> {
@@ -128,8 +129,16 @@ public final class VelocityCommandLine implements Runnable {
     /** Convert {@code {foo.bar=a,foo.baz=b}} to {@code {foo.{bar=a,baz=b}}}. */
     static Map<String, Object> refineContext(Map<String, String> context) {
         Map<String, Object> result = new HashMap<>();
+
+        context.entrySet().forEach(refineEntryInto(result));
+        
+        return result;
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static Consumer<Entry<String, String>> refineEntryInto(Map<String, Object> result) {
         Pattern dot = literalPattern(".");
-        context.entrySet().forEach(e -> {
+        return e -> {
             String key = e.getKey();
             String value = e.getValue();
 
@@ -145,8 +154,7 @@ public final class VelocityCommandLine implements Runnable {
                 }
             }
             m.put(parts[parts.length - 1], value);
-        });
-        return result;
+        };
     }
 
     private static Pattern literalPattern(String s) {
@@ -159,7 +167,7 @@ public final class VelocityCommandLine implements Runnable {
             velocityEngine.mergeTemplate(templateFile.getName(), charset.name(), velocityContext, writer);
         } catch (IOException e) {
             LOG.log(Level.SEVERE, "Error when merging templeate:", e);
-            System.exit(1);
+            throw new RuntimeException(e);
         }
     }
 
