@@ -60,9 +60,6 @@ public final class VelocityCommandLine implements Runnable {
     /** Encoding. */
     private final Charset charset;
 
-    /** Escapetool. */
-    private final String escapetool;
-
     /** Velocity context. */
     private final VelocityContext velocityContext;
 
@@ -89,7 +86,6 @@ public final class VelocityCommandLine implements Runnable {
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
-        this.escapetool = escapetool;
 
         final Pattern comma = literalPattern(",");
         final Pattern equals = literalPattern("=");
