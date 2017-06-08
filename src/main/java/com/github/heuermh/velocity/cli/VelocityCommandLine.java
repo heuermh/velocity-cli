@@ -188,6 +188,7 @@ public final class VelocityCommandLine implements Runnable {
                 } else {
                     LOG.severe(() -> "Unknown encoding " + encodingValue);
                     LOG.severe(() -> "Supported encodings " + Charset.availableCharsets().values());
+                    Usage.usage(USAGE, null, commandLine, arguments, System.out);
                     System.exit(-1);
                     throw new AssertionError();
                 }
