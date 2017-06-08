@@ -26,8 +26,10 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
@@ -67,7 +69,9 @@ public final class VelocityCommandLine implements Runnable {
     private final VelocityEngine velocityEngine;
 
     /** Usage string. */
-    private static final String USAGE = "java VelocityCommandLine -c foo=bar -t template.vm [-o output.txt] [-e encoding] [-x escapetool]";
+    private static final String USAGE = "java VelocityCommandLine -c foo=bar "
+            + "-t template.vm [-o output.txt] [-e encoding] [-x escapetool] "
+            + "[-p file.properties] [-P Properties]";
 
     private static final Logger LOG = Logger.getLogger(VelocityCommandLine.class.getName());
 
@@ -79,10 +83,13 @@ public final class VelocityCommandLine implements Runnable {
      * @param outputFile output file
      * @param charset charset, must not be null
      * @param escapetool escapetool
+     * @param properties
+     * @param propertiesName propertiesName, must not be null
      */
-    public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset, final String escapetool) {
+    public VelocityCommandLine(final String context, final File templateFile, final File outputFile, final Charset charset, final String escapetool, final Properties properties, final String propertiesName) {
         requireNonNull(context);
         requireNonNull(templateFile);
+        requireNonNull(propertiesName);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
@@ -101,6 +108,10 @@ public final class VelocityCommandLine implements Runnable {
         velocityContext = new VelocityContext(refineContext(contextMap));
         if (escapetool != null) {
             velocityContext.put(escapetool, new EscapeTool());
+        }
+        
+        if (properties != null) {
+            velocityContext.put(propertiesName, properties);
         }
 
         velocityEngine = new VelocityEngine();
@@ -166,8 +177,10 @@ public final class VelocityCommandLine implements Runnable {
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
         StringArgument encoding = new StringArgument("e", "encoding", "encoding, default utf-8", false);
         StringArgument escapeTool = new StringArgument("x", "escapetool", "add escapetool into context", false);
+        FileArgument propertiesFile = new FileArgument("p", "propertiesFile", "add properties into context, default null or System.getProperties, if -P given", false);
+        StringArgument propertiesName = new StringArgument("P", "propertiesName", "name for properties, default Properties", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile, encoding, escapeTool);
+        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile, encoding, escapeTool, propertiesFile, propertiesName);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -195,7 +208,26 @@ public final class VelocityCommandLine implements Runnable {
             } else {
                 cs = StandardCharsets.UTF_8;
             }
-            new VelocityCommandLine(context.getValue(), templateFile.getValue(), outputFile.getValue(), cs, escapeTool.getValue()).run();
+            Properties properties;
+            if (propertiesFile.wasFound()) {
+                File f = propertiesFile.getValue();
+                try {
+                    properties = new Properties();
+                    properties.load(Files.newInputStream(f.toPath()));
+                } catch (IOException ex) {
+                    LOG.log(Level.SEVERE, "Error reading file", ex);
+                    Usage.usage(USAGE, null, commandLine, arguments, System.out);
+                    System.exit(-1);
+                    throw new AssertionError();
+                }
+            } else if (propertiesName.wasFound()) {
+                properties = System.getProperties();
+            } else {
+                properties = null;
+            }
+            new VelocityCommandLine(context.getValue(), templateFile.getValue(), 
+                    outputFile.getValue(), cs, escapeTool.getValue(), 
+                    properties, propertiesName.getValue("Properties")).run();
         }
         catch (CommandLineParseException e) {
             if (about.wasFound()) {
