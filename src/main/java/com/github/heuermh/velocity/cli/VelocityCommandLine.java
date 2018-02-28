@@ -79,8 +79,8 @@ public final class VelocityCommandLine implements Runnable {
 
     /** Usage string. */
     private static final String USAGE = "java VelocityCommandLine -c foo=bar "
-            + "-t template.vm [-o output.txt] [-e encoding] [-x escapetool] "
-            + "[-p file.properties] [-P Properties] [-l logLevel]";
+            + "-r /my/path/to/templates -t template.vm [-o output.txt] [-e encoding] "
+            + "[-x escapetool] [-p file.properties] [-P Properties] [-l logLevel]";
 
     private static final Logger LOG = Logger.getLogger(VelocityCommandLine.class.getName());
 
@@ -88,6 +88,7 @@ public final class VelocityCommandLine implements Runnable {
      * Create a new command line interface to Apache Velocity.
      *
      * @param context context, must not be null
+     * @param resourcePath file resource path, must not be null
      * @param templateFile input template file, must not be null
      * @param outputFile output file
      * @param charset charset, must not be null
