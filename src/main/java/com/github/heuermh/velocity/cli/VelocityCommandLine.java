@@ -59,6 +59,9 @@ import org.dishevelled.commandline.argument.StringArgument;
  */
 public final class VelocityCommandLine implements Runnable {
 
+    /** Input resource path. */
+    private final File resourcePath;    
+    
     /** Input template file. */
     private final File templateFile;
 
@@ -76,8 +79,8 @@ public final class VelocityCommandLine implements Runnable {
 
     /** Usage string. */
     private static final String USAGE = "java VelocityCommandLine -c foo=bar "
-            + "-t template.vm [-o output.txt] [-e encoding] [-x escapetool] "
-            + "[-p file.properties] [-P Properties] [-l logLevel]";
+            + "-r /my/path/to/templates -t template.vm [-o output.txt] [-e encoding] "
+            + "[-x escapetool] [-p file.properties] [-P Properties] [-l logLevel]";
 
     private static final Logger LOG = Logger.getLogger(VelocityCommandLine.class.getName());
 
@@ -85,6 +88,7 @@ public final class VelocityCommandLine implements Runnable {
      * Create a new command line interface to Apache Velocity.
      *
      * @param context context, must not be null
+     * @param resourcePath file resource path, must not be null
      * @param templateFile input template file, must not be null
      * @param outputFile output file
      * @param charset charset, must not be null
@@ -92,14 +96,17 @@ public final class VelocityCommandLine implements Runnable {
      * @param properties
      * @param propertiesName propertiesName, must not be null
      */
-    public VelocityCommandLine(final @Nonnull String context, 
+    public VelocityCommandLine(final @Nonnull String context, final @Nonnull File resourcePath,
             final @Nonnull File templateFile, final File outputFile, 
             final @Nonnull Charset charset, final String escapetool,
             final Properties properties, final @Nonnull String propertiesName) {
         requireNonNull(context);
+        requireNonNull(resourcePath);
         requireNonNull(templateFile);
         requireNonNull(charset);
         requireNonNull(propertiesName);
+
+        this.resourcePath = resourcePath;
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
@@ -127,9 +134,17 @@ public final class VelocityCommandLine implements Runnable {
             velocityContext.put(propertiesName, properties);
         }
 
+        final Properties config = new Properties();
+        config.setProperty(Velocity.RESOURCE_LOADER, "classpath,file");
+        config.setProperty(Velocity.FILE_RESOURCE_LOADER_PATH, this.resourcePath.toString());
+        config.setProperty(Velocity.ENCODING_DEFAULT, charset.toString());
+        config.setProperty(Velocity.INPUT_ENCODING, charset.toString());
+        config.setProperty(Velocity.OUTPUT_ENCODING, charset.toString());
+        
         velocityEngine = new VelocityEngine();
         Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, JdkLogChute.class);
-        velocityEngine.init();
+        
+        velocityEngine.init(config);
     }
 
     /** Convert {@code {foo.bar=a,foo.baz=b}} to {@code {foo.{bar=a,baz=b}}}. */
@@ -154,7 +169,7 @@ public final class VelocityCommandLine implements Runnable {
                 String part = parts[i];
                 Object o = m.computeIfAbsent(part, __ -> new HashMap<>());
                 if (o instanceof Map) {
-                    m = (Map) o;
+                    m = (Map<String, Object>) o;
                 } else {
                     throw new IllegalStateException("unexpected " + o);
                 }
@@ -193,6 +208,7 @@ public final class VelocityCommandLine implements Runnable {
         Switch about = new Switch("a", "about", "display about message");
         Switch help = new Switch("h", "help", "display help message");
         StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", true);
+        FileArgument resourcePath = new FileArgument("r", "resourcePath", "Resource Path", true);
         FileArgument templateFile = new FileArgument("t", "template", "template file", true);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
         StringArgument encoding = new StringArgument("e", "encoding", "encoding, default utf-8", false);
@@ -201,7 +217,7 @@ public final class VelocityCommandLine implements Runnable {
         StringArgument propertiesName = new StringArgument("P", "propertiesName", "name for properties, default Properties", false);
         StringArgument logLevel = new StringArgument("l", "logLevel", "log level, default SEVERE", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile, encoding, escapeTool, propertiesFile, propertiesName, logLevel);
+        ArgumentList arguments = new ArgumentList(about, help, context, resourcePath, templateFile, outputFile, encoding, escapeTool, propertiesFile, propertiesName, logLevel);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -241,6 +257,11 @@ public final class VelocityCommandLine implements Runnable {
                 Usage.usage(USAGE, null, commandLine, arguments, System.out);
                 System.exit(-1);
             }
+            if (resourcePath.wasFound() && !Files.isDirectory(resourcePath.getValue().toPath())) {                
+                LOG.severe("Invalid Resource Path");
+                Usage.usage(USAGE, null, commandLine, arguments, System.out);
+                System.exit(-1);
+            }            
             Charset cs;
             if (encoding.wasFound()) {
                 final String encodingValue = encoding.getValue();
@@ -273,7 +294,7 @@ public final class VelocityCommandLine implements Runnable {
             } else {
                 properties = null;
             }
-            new VelocityCommandLine(context.getValue(), templateFile.getValue(), 
+            new VelocityCommandLine(context.getValue(), resourcePath.getValue(), templateFile.getValue(), 
                     outputFile.getValue(), cs, escapeTool.getValue(), 
                     properties, propertiesName.getValue("Properties")).run();
         }
