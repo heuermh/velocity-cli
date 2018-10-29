@@ -8,15 +8,6 @@ Developers:
         (gpg --list-sigs <your name>
              && gpg --armor --export <your name>) >> this file.
 
-pub   rsa4096 2015-10-13 [SC]
-      6E5CB53C9101E9D4F1E102C5063726B9DE699367
-uid           [ultimate] Michael L Heuer (CODE SIGNING KEY) <heuermh@acm.org>
-sig 3        063726B9DE699367 2015-10-13  Michael L Heuer (CODE SIGNING KEY) <heuermh@acm.org>
-sig          75A8B0049CD295D2 2015-10-13  Matt Massie <massie@berkeley.edu>
-sig          EBD5A75C75F675A5 2016-06-27  ADAM Packager (http://bdgenomics.org/) <packager@bdgenomics.org>
-sub   rsa4096 2015-10-13 [E]
-sig          063726B9DE699367 2015-10-13  Michael L Heuer (CODE SIGNING KEY) <heuermh@acm.org>
-
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQINBFYdJkIBEADT8VkKFQ7JyxovxLZxFOnWdwv7ziQUKX+WFDXnm4AhQQM/jC7G
