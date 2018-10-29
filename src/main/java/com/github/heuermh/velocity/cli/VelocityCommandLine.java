@@ -59,7 +59,7 @@ public final class VelocityCommandLine implements Runnable {
     private final VelocityEngine velocityEngine;
 
     /** Usage string. */
-    private static final String USAGE = "java VelocityCommandLine -c foo=bar -t template.wm [-o output.txt]";
+    private static final String USAGE = "velocity -c foo=bar -t template.wm [-o output.txt]";
 
 
     /**

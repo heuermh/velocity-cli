@@ -8,7 +8,7 @@ Command line interface to Apache Velocity.
 ```bash
 $ velocity -h
 usage:
-java VelocityCommandLine -c foo=bar -t template.wm [-o output.txt]
+velocity -c foo=bar -t template.wm [-o output.txt]
 
 arguments:
    -a, --about  display about message [optional]
