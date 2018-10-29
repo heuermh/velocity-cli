@@ -26,7 +26,7 @@ final class About {
     private static final String ARTIFACT_ID = "${project.artifactId}";
     private static final String BUILD_TIMESTAMP = "${maven.build.timestamp}";
     private static final String COMMIT = "${git.commit.id}";
-    private static final String COPYRIGHT = "Copyright (c) 2014-2016 held jointly by the individual authors.";
+    private static final String COPYRIGHT = "Copyright (c) 2014-2018 held jointly by the individual authors.";
     private static final String LICENSE = "Licensed under Apache License, Version 2.0";
     private static final String VERSION = "${project.version}";
 
