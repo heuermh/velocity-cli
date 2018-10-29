@@ -77,7 +77,6 @@ public final class VelocityCommandLine implements Runnable {
         velocityContext = new VelocityContext(Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context)));
 
         velocityEngine = new VelocityEngine();
-        //Velocity.setProperty(Velocity.RUNTIME_LOG_LOGSYSTEM, this);
         velocityEngine.init();
     }
 
