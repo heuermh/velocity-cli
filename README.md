@@ -10,14 +10,17 @@ Command line interface to Apache Velocity.
 ## Usage
 
 ```bash
-$ velocity -h
+$ velocity --help
 usage:
-velocity -c foo=bar -t template.wm [-o output.txt]
+velocity -c foo=bar,baz=qux -r /resource/path -t template.wm [-o output.txt] [-e euc-jp] [--verbose]
 
 arguments:
    -a, --about  display about message [optional]
    -h, --help  display help message [optional]
    -c, --context [class java.lang.String]  context as comma-separated key value pairs [required]
+   -r, --resource [class java.io.File]  resource path [optional]
    -t, --template [class java.io.File]  template file [required]
    -o, --output [class java.io.File]  output file, default stdout [optional]
+   -e, --encoding [class java.nio.charset.Charset]  encoding, default UTF-8 [optional]
+   -v, --verbose  display verbose log messages [optional]
 ```
