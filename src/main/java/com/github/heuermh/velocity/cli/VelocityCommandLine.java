@@ -19,10 +19,18 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
+import java.util.Map;
+import java.util.Properties;
 
 import com.google.common.base.Splitter;
 
@@ -30,6 +38,7 @@ import com.google.common.collect.Maps;
 
 import org.apache.velocity.VelocityContext;
 
+import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
 
 import org.dishevelled.commandline.ArgumentList;
@@ -39,8 +48,12 @@ import org.dishevelled.commandline.CommandLineParser;
 import org.dishevelled.commandline.Switch;
 import org.dishevelled.commandline.Usage;
 
+import org.dishevelled.commandline.argument.AbstractArgument;
 import org.dishevelled.commandline.argument.FileArgument;
 import org.dishevelled.commandline.argument.StringArgument;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Command line interface to Apache Velocity.
@@ -52,56 +65,101 @@ public final class VelocityCommandLine implements Runnable {
     /** Output file. */
     private final File outputFile;
 
+    /** Charset. */
+    private final Charset charset;
+
     /** Velocity context. */
     private final VelocityContext velocityContext;
 
     /** Velocity engine. */
     private final VelocityEngine velocityEngine;
 
+    /** Logger. */
+    private final Logger logger = LoggerFactory.getLogger(VelocityCommandLine.class);
+
     /** Usage string. */
-    private static final String USAGE = "velocity -c foo=bar -t template.wm [-o output.txt]";
+    private static final String USAGE = "velocity -c foo=bar,baz=qux -r /resource/path -t template.wm [-o output.txt] [-e euc-jp] [--verbose]";
 
 
     /**
      * Create a new command line interface to Apache Velocity.
      *
      * @param context context, must not be null
-     * @param templateFile input template file
-     * @param outputFile output file
+     * @param resourcePath resource path, if any
+     * @param templateFile input template file, must not be null
+     * @param outputFile output file, if any
+     * @param charset charset, must not be null
      */
-    public VelocityCommandLine(final String context, final File templateFile, final File outputFile) {
+    public VelocityCommandLine(final String context,
+                               final File resourcePath,
+                               final File templateFile,
+                               final File outputFile,
+                               final Charset charset) {
         checkNotNull(context);
+        checkNotNull(templateFile);
+        checkNotNull(charset);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
+        this.charset = charset;
 
-        velocityContext = new VelocityContext(Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context)));
+        Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
+        logger.info("Using {} as context", map);
+
+        velocityContext = new VelocityContext(map);
+
+        final Properties config = new Properties();
+        logger.info("Using {} as input and default encoding", charset);
+        config.setProperty(Velocity.ENCODING_DEFAULT, charset.toString());
+        config.setProperty(Velocity.INPUT_ENCODING, charset.toString());
+        if (resourcePath != null) {
+            logger.info("Using {} as resource path", resourcePath);
+            config.setProperty(Velocity.RESOURCE_LOADER, "classpath,file");
+            config.setProperty(Velocity.FILE_RESOURCE_LOADER_PATH, resourcePath.toString());
+        }
 
         velocityEngine = new VelocityEngine();
-        velocityEngine.init();
+        velocityEngine.init(config);
     }
 
 
     @Override
     public void run() {
-        Writer writer = null;
-        try {
-            writer = (outputFile == null) ? new BufferedWriter(new OutputStreamWriter(System.out)) : new BufferedWriter(new FileWriter(outputFile));
-            velocityEngine.mergeTemplate(templateFile.getName(), "UTF-8", velocityContext, writer);
+        try (Writer writer = writer(outputFile, charset)) {
+            logger.info("Merging template {} to {}", templateFile, outputFile == null ? "stdout" : outputFile);
+            velocityEngine.mergeTemplate(templateFile.getName(), charset.name(), velocityContext, writer);
         }
         catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Could not merge template {}, caught IOException", templateFile, e);
             System.exit(1);
-        }
-        finally {
-            try {
-                writer.close();
-            }
-            catch (Exception e) {
-                // ignored
-            }
         }
     }
 
+
+    /**
+     * Create a new writer with the specified output file or stdout and charset file encoding.
+     *
+     * @param outputFile output file, if any
+     * @param charset charset file encoding
+     * @return a new writer with the specified output file and charset
+     * @throws FileNotFoundException if output file specified but not found
+     */
+    private static Writer writer(final File outputFile, final Charset charset) throws FileNotFoundException {
+        return new BufferedWriter(new OutputStreamWriter((outputFile == null) ? System.out : new FileOutputStream(outputFile), charset.newEncoder()));
+    }
+
+    /**
+     * Charset argument.
+     */
+    private static class CharsetArgument extends AbstractArgument<Charset> {
+        CharsetArgument(final String shortName, final String longName, final String description, final boolean required) {
+            super(shortName, longName, description, required);
+        }
+
+        @Override
+        protected Charset convert(final String s) throws Exception {
+            return Charset.forName(s);
+        }
+    }
 
     /**
      * Main.
@@ -111,11 +169,18 @@ public final class VelocityCommandLine implements Runnable {
     public static void main(final String[] args) {
         Switch about = new Switch("a", "about", "display about message");
         Switch help = new Switch("h", "help", "display help message");
+        Switch verbose = new Switch("v", "verbose", "display verbose log messages");
+
+        // required arguments
         StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", true);
         FileArgument templateFile = new FileArgument("t", "template", "template file", true);
-        FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, templateFile, outputFile);
+        // optional arguments
+        FileArgument resourcePath = new FileArgument("r", "resource", "resource path", false);
+        FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
+        CharsetArgument charset = new CharsetArgument("e", "encoding", "encoding, default UTF-8", false);
+
+        ArgumentList arguments = new ArgumentList(about, help, context, resourcePath, templateFile, outputFile, charset, verbose);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -128,7 +193,15 @@ public final class VelocityCommandLine implements Runnable {
                 Usage.usage(USAGE, null, commandLine, arguments, System.out);
                 System.exit(-2);
             }
-            new VelocityCommandLine(context.getValue(), templateFile.getValue(), outputFile.getValue()).run();
+            if (verbose.wasFound()) {
+                Properties systemProperties = System.getProperties();
+                systemProperties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "trace");
+            }
+            new VelocityCommandLine(context.getValue(),
+                                    resourcePath.getValue(),
+                                    templateFile.getValue(),
+                                    outputFile.getValue(),
+                                    charset.getValue(StandardCharsets.UTF_8)).run();
         }
         catch (CommandLineParseException e) {
             if (about.wasFound()) {
