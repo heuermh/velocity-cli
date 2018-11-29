@@ -53,8 +53,6 @@
   </developers>
 
   <properties>
-    <maven.build.timestamp>${maven.build.timestamp}</maven.build.timestamp>
-    <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format> 
     <maven.compile.source>1.8</maven.compile.source>
     <maven.compile.target>1.8</maven.compile.target>
     <maven.enforcer.maven-version>[3.1.1,)</maven.enforcer.maven-version>
@@ -247,6 +245,24 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <id>timestamp-property</id>
+            <goals>
+              <goal>timestamp-property</goal>
+            </goals>
+            <configuration>
+              <name>build-helper-maven-plugin.build.timestamp</name>
+              <pattern>yyyy-MM-dd</pattern>
+              <locale>en_US</locale>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
   <dependencyManagement>
@@ -254,7 +270,7 @@
       <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>27.0-jre</version>
+        <version>27.0.1-jre</version>
       </dependency>
       <dependency>
         <groupId>org.apache.velocity</groupId>
