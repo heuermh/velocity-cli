@@ -26,9 +26,9 @@ arguments:
    -v, --verbose  display verbose log messages [optional]
 ```
 
-Velocity takes the substitution values from a (https://velocity.apache.org/engine/2.0/apidocs/org/apache/velocity/VelocityContext.html)[VelocityContext].
+Velocity takes the substitution values from a [VelocityContext](https://velocity.apache.org/engine/2.0/apidocs/org/apache/velocity/VelocityContext.html).
 
-`velocity` will construct this (https://velocity.apache.org/engine/2.0/apidocs/org/apache/velocity/VelocityContext.html)[VelocityContext] from the commandline, with either the `-c` or `-j` parameter. 
+`velocity` will construct this [VelocityContext](https://velocity.apache.org/engine/2.0/apidocs/org/apache/velocity/VelocityContext.html) from the commandline, with either the `-c` or `-j` parameter. 
 
 `-c` is fine for simple (flat) substitutions, for example `-c foo=bar,baz=qux`.
 
