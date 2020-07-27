@@ -120,11 +120,7 @@ public final class VelocityCommandLine implements Runnable {
             JSONTokener tokener = new JSONTokener(is);
             JSONObject object = new JSONObject(tokener);
 
-            velocityContext = new VelocityContext();
-            for(String key : object.keySet())
-            {
-                velocityContext.put(key, object.get(key));
-            }
+            velocityContext = convertJsonObject(object);
         }
         else {
             throw(new IllegalArgumentException("context or jsonFile must not be null"));
@@ -157,6 +153,32 @@ public final class VelocityCommandLine implements Runnable {
         }
     }
 
+    /**
+     * Convert the JSONObject to a VelocityContext
+     * 
+     * This is necessary because JSONbject will throw an exception instead of returning null for nonexistent keys,
+     * which will break if clauses in the templates.
+     * 
+     * @param object
+     * @return VelocityContext
+     */
+    private VelocityContext convertJsonObject(JSONObject object)
+    {
+        VelocityContext vc = new VelocityContext();
+        for(String key : object.keySet())
+        {
+            Object v = object.get(key);
+
+            if (v instanceof org.json.JSONObject) {
+                vc.put(key, convertJsonObject((JSONObject)v));
+            }
+            else {
+                vc.put(key, v);
+            }
+        }
+
+        return vc;
+    }
 
     /**
      * Create a new writer with the specified output file or stdout and charset file encoding.
