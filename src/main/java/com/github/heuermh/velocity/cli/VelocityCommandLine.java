@@ -50,6 +50,7 @@ import org.dishevelled.commandline.Switch;
 import org.dishevelled.commandline.Usage;
 
 import org.dishevelled.commandline.argument.AbstractArgument;
+import org.dishevelled.commandline.argument.BooleanArgument;
 import org.dishevelled.commandline.argument.FileArgument;
 import org.dishevelled.commandline.argument.StringArgument;
 
@@ -101,7 +102,8 @@ public final class VelocityCommandLine implements Runnable {
                                final File resourcePath,
                                final File templateFile,
                                final File outputFile,
-                               final Charset charset) throws FileNotFoundException, IllegalArgumentException
+                               final Charset charset,
+                               final boolean hyphenAllowed) throws FileNotFoundException, IllegalArgumentException
     {
         checkNotNull(templateFile);
         checkNotNull(charset);
@@ -138,6 +140,11 @@ public final class VelocityCommandLine implements Runnable {
 
         velocityEngine = new VelocityEngine();
         velocityEngine.init(config);
+
+        if (hyphenAllowed) {
+            logger.info("Allow hyphens in identifiers");
+            velocityEngine.setProperty(Velocity.PARSER_HYPHEN_ALLOWED, true);
+        }
     }
 
 
@@ -225,8 +232,9 @@ public final class VelocityCommandLine implements Runnable {
         FileArgument resourcePath = new FileArgument("r", "resource", "resource path", false);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
         CharsetArgument charset = new CharsetArgument("e", "encoding", "encoding, default UTF-8", false);
+        BooleanArgument hyphenAllowed = new BooleanArgument("y", "allowHyphen", "allow hyphen in context keys", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, jsonFile, resourcePath, templateFile, outputFile, charset, verbose);
+        ArgumentList arguments = new ArgumentList(about, help, context, jsonFile, resourcePath, templateFile, outputFile, charset, hyphenAllowed, verbose);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -249,7 +257,9 @@ public final class VelocityCommandLine implements Runnable {
                                     resourcePath.getValue(),
                                     templateFile.getValue(),
                                     outputFile.getValue(),
-                                    charset.getValue(StandardCharsets.UTF_8)).run();
+                                    charset.getValue(StandardCharsets.UTF_8),
+                                    hyphenAllowed.wasFound()
+                                ).run();
         }
         catch (CommandLineParseException e) {
             if (about.wasFound()) {
