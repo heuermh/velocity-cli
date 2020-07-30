@@ -16,6 +16,7 @@
 package com.github.heuermh.velocity.cli;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.velocity.runtime.RuntimeConstants.PARSER_HYPHEN_ALLOWED;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -58,6 +59,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.json.JSONObject;
+import org.json.JSONArray;
 import org.json.JSONTokener;
 
 /**
@@ -85,26 +87,20 @@ public final class VelocityCommandLine implements Runnable {
     /** Usage string. */
     private static final String USAGE = "velocity -c foo=bar,baz=qux | -j context.json -r /resource/path -t template.wm [-o output.txt] [-e euc-jp] [--verbose]";
 
-
     /**
      * Create a new command line interface to Apache Velocity.
      *
-     * @param context context (can be null if jsonFile is not null)
-     * @param jsonFile (can be null if context is not null)
+     * @param context      context (can be null if jsonFile is not null)
+     * @param jsonFile     (can be null if context is not null)
      * @param resourcePath resource path, if any
      * @param templateFile input template file, must not be null
-     * @param outputFile output file, if any
-     * @param charset charset, must not be null
+     * @param outputFile   output file, if any
+     * @param charset      charset, must not be null
      * @throws FileNotFoundException
      */
-    public VelocityCommandLine(final String context,
-                               final File jsonFile,
-                               final File resourcePath,
-                               final File templateFile,
-                               final File outputFile,
-                               final Charset charset,
-                               final boolean hyphenAllowed) throws FileNotFoundException, IllegalArgumentException
-    {
+    public VelocityCommandLine(final String context, final File jsonFile, final File resourcePath,
+            final File templateFile, final File outputFile, final Charset charset, final boolean hyphenAllowed)
+            throws FileNotFoundException, IllegalArgumentException {
         checkNotNull(templateFile);
         checkNotNull(charset);
         this.templateFile = templateFile;
@@ -115,7 +111,7 @@ public final class VelocityCommandLine implements Runnable {
             Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
             logger.info("Using {} as context", map);
             velocityContext = new VelocityContext(map);
-        }
+        } 
         else if (jsonFile != null) {
 
             FileInputStream is = new FileInputStream(jsonFile);
@@ -123,9 +119,9 @@ public final class VelocityCommandLine implements Runnable {
             JSONObject object = new JSONObject(tokener);
 
             velocityContext = convertJsonObject(object);
-        }
+        } 
         else {
-            throw(new IllegalArgumentException("context or jsonFile must not be null"));
+            throw (new IllegalArgumentException("context or jsonFile must not be null"));
         }
 
         final Properties config = new Properties();
@@ -143,7 +139,7 @@ public final class VelocityCommandLine implements Runnable {
 
         if (hyphenAllowed) {
             logger.info("Allow hyphens in identifiers");
-            velocityEngine.setProperty(Velocity.PARSER_HYPHEN_ALLOWED, true);
+            velocityEngine.setProperty(PARSER_HYPHEN_ALLOWED, true);
         }
     }
 
@@ -178,6 +174,25 @@ public final class VelocityCommandLine implements Runnable {
 
             if (v instanceof org.json.JSONObject) {
                 vc.put(key, convertJsonObject((JSONObject)v));
+            }
+            else if (v instanceof org.json.JSONArray) {
+                JSONArray ja = (JSONArray)v;
+
+                Object[] va = new Object[ja.length()];
+
+                for (int i = 0; i < ja.length(); i++) {
+
+                    Object o = ja.get(i);
+
+                    if (o instanceof JSONObject) {
+                        va[i] = convertJsonObject((JSONObject)o);
+                    }
+                    else {
+                        va[i] = o;
+                    }
+                }
+
+                vc.put(key, va);
             }
             else {
                 vc.put(key, v);
