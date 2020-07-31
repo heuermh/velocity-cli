@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -59,7 +58,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.json.JSONObject;
-import org.json.JSONArray;
 import org.json.JSONTokener;
 
 /**
@@ -80,6 +78,9 @@ public final class VelocityCommandLine implements Runnable {
 
     /** Velocity engine. */
     private final VelocityEngine velocityEngine;
+
+    /** JSON Utils. */
+    private final JSONUtils jsonUtils;
 
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(VelocityCommandLine.class);
@@ -106,6 +107,7 @@ public final class VelocityCommandLine implements Runnable {
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
+        this.jsonUtils = new JSONUtils();
 
         if (context != null) {
             Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
@@ -118,11 +120,13 @@ public final class VelocityCommandLine implements Runnable {
             JSONTokener tokener = new JSONTokener(is);
             JSONObject object = new JSONObject(tokener);
 
-            velocityContext = convertJsonObject(object);
+            velocityContext = jsonUtils.fromJSONbject(object);
         } 
         else {
             throw (new IllegalArgumentException("context or jsonFile must not be null"));
         }
+
+        velocityContext.put("jsonUtils", jsonUtils);
 
         final Properties config = new Properties();
         logger.info("Using {} as input and default encoding", charset);
@@ -154,52 +158,6 @@ public final class VelocityCommandLine implements Runnable {
             logger.error("Could not merge template {}, caught IOException", templateFile, e);
             System.exit(1);
         }
-    }
-
-    /**
-     * Convert the JSONObject to a VelocityContext
-     * 
-     * This is necessary because JSONbject will throw an exception instead of returning null for nonexistent keys,
-     * which will break if clauses in the templates.
-     * 
-     * @param object
-     * @return VelocityContext
-     */
-    private VelocityContext convertJsonObject(JSONObject object)
-    {
-        VelocityContext vc = new VelocityContext();
-        for(String key : object.keySet())
-        {
-            Object v = object.get(key);
-
-            if (v instanceof org.json.JSONObject) {
-                vc.put(key, convertJsonObject((JSONObject)v));
-            }
-            else if (v instanceof org.json.JSONArray) {
-                JSONArray ja = (JSONArray)v;
-
-                Object[] va = new Object[ja.length()];
-
-                for (int i = 0; i < ja.length(); i++) {
-
-                    Object o = ja.get(i);
-
-                    if (o instanceof JSONObject) {
-                        va[i] = convertJsonObject((JSONObject)o);
-                    }
-                    else {
-                        va[i] = o;
-                    }
-                }
-
-                vc.put(key, va);
-            }
-            else {
-                vc.put(key, v);
-            }
-        }
-
-        return vc;
     }
 
     /**
