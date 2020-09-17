@@ -85,7 +85,7 @@ public final class VelocityCommandLine implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(VelocityCommandLine.class);
 
     /** Usage string. */
-    private static final String USAGE = "velocity [-c foo=bar,baz=qux] [-r /resource/path] -t template.wm [-o output.txt] [-e euc-jp] [--verbose]";
+    private static final String USAGE = "velocity -t template.wm\n  [-c foo=bar,baz=qux]\n  [-r /resource/path]\n  [-o output.txt]\n  [-e euc-jp]\n  [--verbose]";
 
 
     /**
@@ -210,7 +210,7 @@ public final class VelocityCommandLine implements Runnable {
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
         CharsetArgument charset = new CharsetArgument("e", "encoding", "encoding, default UTF-8", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, resourcePath, templateFile, outputFile, charset, verbose);
+        ArgumentList arguments = new ArgumentList(about, help, templateFile, context, resourcePath, outputFile, charset, verbose);
         CommandLine commandLine = new CommandLine(args);
         try
         {
