@@ -16,12 +16,13 @@
 package com.github.heuermh.velocity.cli;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.velocity.runtime.RuntimeConstants.PARSER_HYPHEN_ALLOWED;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -49,11 +50,15 @@ import org.dishevelled.commandline.Switch;
 import org.dishevelled.commandline.Usage;
 
 import org.dishevelled.commandline.argument.AbstractArgument;
+import org.dishevelled.commandline.argument.BooleanArgument;
 import org.dishevelled.commandline.argument.FileArgument;
 import org.dishevelled.commandline.argument.StringArgument;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
 /**
  * Command line interface to Apache Velocity.
@@ -74,38 +79,54 @@ public final class VelocityCommandLine implements Runnable {
     /** Velocity engine. */
     private final VelocityEngine velocityEngine;
 
+    /** JSON Utils. */
+    private final JSONUtils jsonUtils;
+
     /** Logger. */
     private final Logger logger = LoggerFactory.getLogger(VelocityCommandLine.class);
 
     /** Usage string. */
-    private static final String USAGE = "velocity -c foo=bar,baz=qux -r /resource/path -t template.wm [-o output.txt] [-e euc-jp] [--verbose]";
-
+    private static final String USAGE = "velocity -c foo=bar,baz=qux | -j context.json -r /resource/path -t template.wm [-o output.txt] [-e euc-jp] [--verbose]";
 
     /**
      * Create a new command line interface to Apache Velocity.
      *
-     * @param context context, must not be null
+     * @param context      context (can be null if jsonFile is not null)
+     * @param jsonFile     (can be null if context is not null)
      * @param resourcePath resource path, if any
      * @param templateFile input template file, must not be null
-     * @param outputFile output file, if any
-     * @param charset charset, must not be null
+     * @param outputFile   output file, if any
+     * @param charset      charset, must not be null
+     * @throws FileNotFoundException
      */
-    public VelocityCommandLine(final String context,
-                               final File resourcePath,
-                               final File templateFile,
-                               final File outputFile,
-                               final Charset charset) {
-        checkNotNull(context);
+    public VelocityCommandLine(final String context, final File jsonFile, final File resourcePath,
+            final File templateFile, final File outputFile, final Charset charset, final boolean hyphenAllowed)
+            throws FileNotFoundException, IllegalArgumentException {
         checkNotNull(templateFile);
         checkNotNull(charset);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
+        this.jsonUtils = new JSONUtils();
 
-        Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
-        logger.info("Using {} as context", map);
+        if (context != null) {
+            Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
+            logger.info("Using {} as context", map);
+            velocityContext = new VelocityContext(map);
+        } 
+        else if (jsonFile != null) {
 
-        velocityContext = new VelocityContext(map);
+            FileInputStream is = new FileInputStream(jsonFile);
+            JSONTokener tokener = new JSONTokener(is);
+            JSONObject object = new JSONObject(tokener);
+
+            velocityContext = jsonUtils.fromJSONbject(object);
+        } 
+        else {
+            throw (new IllegalArgumentException("context or jsonFile must not be null"));
+        }
+
+        velocityContext.put("jsonUtils", jsonUtils);
 
         final Properties config = new Properties();
         logger.info("Using {} as input and default encoding", charset);
@@ -119,6 +140,11 @@ public final class VelocityCommandLine implements Runnable {
 
         velocityEngine = new VelocityEngine();
         velocityEngine.init(config);
+
+        if (hyphenAllowed) {
+            logger.info("Allow hyphens in identifiers");
+            velocityEngine.setProperty(PARSER_HYPHEN_ALLOWED, true);
+        }
     }
 
 
@@ -133,7 +159,6 @@ public final class VelocityCommandLine implements Runnable {
             System.exit(1);
         }
     }
-
 
     /**
      * Create a new writer with the specified output file or stdout and charset file encoding.
@@ -172,15 +197,17 @@ public final class VelocityCommandLine implements Runnable {
         Switch verbose = new Switch("v", "verbose", "display verbose log messages");
 
         // required arguments
-        StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", true);
         FileArgument templateFile = new FileArgument("t", "template", "template file", true);
 
         // optional arguments
+        StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", false);
+        FileArgument jsonFile = new FileArgument("j", "jsonFile", "context as json file", false);
         FileArgument resourcePath = new FileArgument("r", "resource", "resource path", false);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
         CharsetArgument charset = new CharsetArgument("e", "encoding", "encoding, default UTF-8", false);
+        BooleanArgument hyphenAllowed = new BooleanArgument("y", "allowHyphen", "allow hyphen in context keys", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, context, resourcePath, templateFile, outputFile, charset, verbose);
+        ArgumentList arguments = new ArgumentList(about, help, context, jsonFile, resourcePath, templateFile, outputFile, charset, hyphenAllowed, verbose);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -197,11 +224,15 @@ public final class VelocityCommandLine implements Runnable {
                 Properties systemProperties = System.getProperties();
                 systemProperties.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "trace");
             }
+
             new VelocityCommandLine(context.getValue(),
+                                    jsonFile.getValue(),
                                     resourcePath.getValue(),
                                     templateFile.getValue(),
                                     outputFile.getValue(),
-                                    charset.getValue(StandardCharsets.UTF_8)).run();
+                                    charset.getValue(StandardCharsets.UTF_8),
+                                    hyphenAllowed.wasFound()
+                                ).run();
         }
         catch (CommandLineParseException e) {
             if (about.wasFound()) {
@@ -216,6 +247,10 @@ public final class VelocityCommandLine implements Runnable {
             System.exit(-1);
         }
         catch (IllegalArgumentException e) {
+            Usage.usage(USAGE, e, commandLine, arguments, System.err);
+            System.exit(-1);
+        }
+        catch (FileNotFoundException e) {
             Usage.usage(USAGE, e, commandLine, arguments, System.err);
             System.exit(-1);
         }

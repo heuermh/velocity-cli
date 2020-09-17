@@ -21,3 +21,9 @@ build
 #*
 *#*
 .DS_Store
+
+# VS Code
+.classpath
+.project
+.settings/
+.vscode/
