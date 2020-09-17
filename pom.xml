@@ -284,6 +284,11 @@
         <version>2.3</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.velocity.tools</groupId>
+        <artifactId>velocity-tools-generic</artifactId>
+        <version>3.1</version>
+      </dependency>
+      <dependency>
         <groupId>org.dishevelled</groupId>
         <artifactId>dsh-commandline</artifactId>
         <version>1.2</version>
@@ -314,6 +319,11 @@
     <dependency>
       <groupId>org.apache.velocity</groupId>
       <artifactId>velocity-engine-core</artifactId>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.velocity.tools</groupId>
+      <artifactId>velocity-tools-generic</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
