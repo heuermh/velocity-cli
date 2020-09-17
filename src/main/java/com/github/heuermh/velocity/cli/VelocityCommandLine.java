@@ -32,6 +32,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Properties;
 
+import javax.annotation.Nullable;
+import javax.annotation.ParametersAreNonnullByDefault;
+
+import javax.annotation.concurrent.Immutable;
+
 import com.google.common.base.Splitter;
 
 import com.google.common.collect.Maps;
@@ -58,6 +63,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Command line interface to Apache Velocity.
  */
+@Immutable
+@ParametersAreNonnullByDefault
 public final class VelocityCommandLine implements Runnable {
     /** Input template file. */
     private final File templateFile;
@@ -78,34 +85,57 @@ public final class VelocityCommandLine implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(VelocityCommandLine.class);
 
     /** Usage string. */
-    private static final String USAGE = "velocity -c foo=bar,baz=qux -r /resource/path -t template.wm [-o output.txt] [-e euc-jp] [--verbose]";
+    private static final String USAGE = "velocity [-c foo=bar,baz=qux] [-r /resource/path] -t template.wm [-o output.txt] [-e euc-jp] [--verbose]";
 
 
     /**
-     * Create a new command line interface to Apache Velocity.
+     * Create a new command line interface to Apache Velocity
+     * with an empty context.
      *
-     * @param context context, must not be null
+     * @since 2.2
      * @param resourcePath resource path, if any
      * @param templateFile input template file, must not be null
      * @param outputFile output file, if any
      * @param charset charset, must not be null
      */
-    public VelocityCommandLine(final String context,
-                               final File resourcePath,
+    public VelocityCommandLine(@Nullable final File resourcePath,
                                final File templateFile,
-                               final File outputFile,
+                               @Nullable final File outputFile,
                                final Charset charset) {
-        checkNotNull(context);
+
+        this(null, resourcePath, templateFile, outputFile, charset);
+    }
+
+    /**
+     * Create a new command line interface to Apache Velocity.
+     *
+     * @param context context, if any
+     * @param resourcePath resource path, if any
+     * @param templateFile input template file, must not be null
+     * @param outputFile output file, if any
+     * @param charset charset, must not be null
+     */
+    public VelocityCommandLine(@Nullable final String context,
+                               @Nullable final File resourcePath,
+                               final File templateFile,
+                               @Nullable final File outputFile,
+                               final Charset charset) {
+
         checkNotNull(templateFile);
         checkNotNull(charset);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
 
-        Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
-        logger.info("Using {} as context", map);
+        velocityContext = new VelocityContext();
 
-        velocityContext = new VelocityContext(map);
+        if (context != null) {
+            Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
+            logger.info("Using {} as context", map);
+            for (Map.Entry<String, Object> entry : map.entrySet()) {
+                velocityContext.put(entry.getKey(), entry.getValue());
+            }
+        }
 
         final Properties config = new Properties();
         logger.info("Using {} as input and default encoding", charset);
@@ -172,10 +202,10 @@ public final class VelocityCommandLine implements Runnable {
         Switch verbose = new Switch("v", "verbose", "display verbose log messages");
 
         // required arguments
-        StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", true);
         FileArgument templateFile = new FileArgument("t", "template", "template file", true);
 
         // optional arguments
+        StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", false);
         FileArgument resourcePath = new FileArgument("r", "resource", "resource path", false);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
         CharsetArgument charset = new CharsetArgument("e", "encoding", "encoding, default UTF-8", false);
