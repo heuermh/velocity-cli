@@ -29,6 +29,7 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -43,8 +44,12 @@ import com.google.common.collect.Maps;
 
 import org.apache.velocity.VelocityContext;
 
+import org.apache.velocity.context.Context;
+
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
+
+import org.apache.velocity.tools.ToolManager;
 
 import org.dishevelled.commandline.ArgumentList;
 import org.dishevelled.commandline.CommandLine;
@@ -56,6 +61,7 @@ import org.dishevelled.commandline.Usage;
 import org.dishevelled.commandline.argument.AbstractArgument;
 import org.dishevelled.commandline.argument.FileArgument;
 import org.dishevelled.commandline.argument.StringArgument;
+import org.dishevelled.commandline.argument.StringListArgument;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +82,7 @@ public final class VelocityCommandLine implements Runnable {
     private final Charset charset;
 
     /** Velocity context. */
-    private final VelocityContext velocityContext;
+    private final Context velocityContext;
 
     /** Velocity engine. */
     private final VelocityEngine velocityEngine;
@@ -85,7 +91,7 @@ public final class VelocityCommandLine implements Runnable {
     private final Logger logger = LoggerFactory.getLogger(VelocityCommandLine.class);
 
     /** Usage string. */
-    private static final String USAGE = "velocity -t template.wm\n  [-c foo=bar,baz=qux]\n  [-r /resource/path]\n  [-o output.txt]\n  [-e euc-jp]\n  [--verbose]";
+    private static final String USAGE = "velocity -t template.wm\n  [-c foo=bar,baz=qux]\n  [-r /resource/path]\n  [-o output.txt]\n  [-e euc-jp]\n  [-g date,math]\n  [--verbose]";
 
 
     /**
@@ -121,13 +127,39 @@ public final class VelocityCommandLine implements Runnable {
                                @Nullable final File outputFile,
                                final Charset charset) {
 
+        this(context, resourcePath, templateFile, outputFile, null, charset);
+    }
+
+    /**
+     * Create a new command line interface to Apache Velocity.
+     *
+     * @since 2.2
+     * @param context context, if any
+     * @param resourcePath resource path, if any
+     * @param templateFile input template file, must not be null
+     * @param outputFile output file, if any
+     * @param tools list of tools to install, if any
+     * @param charset charset, must not be null
+     */
+    public VelocityCommandLine(@Nullable final String context,
+                               @Nullable final File resourcePath,
+                               final File templateFile,
+                               @Nullable final File outputFile,
+                               @Nullable final List<String> tools,
+                               final Charset charset) {
+
         checkNotNull(templateFile);
         checkNotNull(charset);
         this.templateFile = templateFile;
         this.outputFile = outputFile;
         this.charset = charset;
 
-        velocityContext = new VelocityContext();
+        ToolManager toolManager = new ToolManager(true);
+        velocityContext = toolManager.createContext();
+
+        if (tools != null && !tools.isEmpty()) {
+            installGenericTools(tools, velocityContext);
+        }
 
         if (context != null) {
             Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
@@ -178,6 +210,68 @@ public final class VelocityCommandLine implements Runnable {
     }
 
     /**
+     * Install generic tools into the specified Velocity context.
+     *
+     * @param tools list of tools to install
+     * @param velocityContext velocity context
+     */
+    private static void installGenericTools(final List<String> tools, final Context velocityContext) {
+        for (String tool : tools) {
+            if ("alt".equals(tool)) {
+                velocityContext.put("alt", new org.apache.velocity.tools.generic.AlternatorTool());
+            }
+            else if ("class".equals(tool)) {
+                velocityContext.put("class", new org.apache.velocity.tools.generic.ClassTool());
+            }
+            else if ("context".equals(tool)) {
+                velocityContext.put("context", new org.apache.velocity.tools.generic.ContextTool());
+            }
+            else if ("convert".equals(tool)) {
+                velocityContext.put("convert", new org.apache.velocity.tools.generic.ConversionTool());
+            }
+            else if ("date".equals(tool)) {
+                velocityContext.put("date", new org.apache.velocity.tools.generic.ComparisonDateTool());
+            }
+            else if ("disp".equals(tool)) {
+                velocityContext.put("disp", new org.apache.velocity.tools.generic.DisplayTool());
+            }
+            else if ("esc".equals(tool)) {
+                velocityContext.put("esc", new org.apache.velocity.tools.generic.EscapeTool());
+            }
+            else if ("field".equals(tool)) {
+                velocityContext.put("field", new org.apache.velocity.tools.generic.FieldTool());
+            }
+            else if ("json".equals(tool)) {
+                velocityContext.put("json", new org.apache.velocity.tools.generic.JsonTool());
+            }
+            else if ("link".equals(tool)) {
+                velocityContext.put("link", new org.apache.velocity.tools.generic.LinkTool());
+            }
+            else if ("log".equals(tool)) {
+                velocityContext.put("log", new org.apache.velocity.tools.generic.LogTool());
+            }
+            else if ("math".equals(tool)) {
+                velocityContext.put("math", new org.apache.velocity.tools.generic.MathTool());
+            }
+            else if ("number".equals(tool)) {
+                velocityContext.put("number", new org.apache.velocity.tools.generic.NumberTool());
+            }
+            else if ("render".equals(tool)) {
+                velocityContext.put("render", new org.apache.velocity.tools.generic.RenderTool());
+            }
+            else if ("sort".equals(tool)) {
+                velocityContext.put("sort", new org.apache.velocity.tools.generic.SortTool());
+            }
+            else if ("text".equals(tool)) {
+                velocityContext.put("text", new org.apache.velocity.tools.generic.ResourceTool());
+            }
+            else if ("xml".equals(tool)) {
+                velocityContext.put("xml", new org.apache.velocity.tools.generic.XmlTool());
+            }
+        }
+    }
+
+    /**
      * Charset argument.
      */
     private static class CharsetArgument extends AbstractArgument<Charset> {
@@ -190,6 +284,7 @@ public final class VelocityCommandLine implements Runnable {
             return Charset.forName(s);
         }
     }
+
 
     /**
      * Main.
@@ -208,9 +303,10 @@ public final class VelocityCommandLine implements Runnable {
         StringArgument context = new StringArgument("c", "context", "context as comma-separated key value pairs", false);
         FileArgument resourcePath = new FileArgument("r", "resource", "resource path", false);
         FileArgument outputFile = new FileArgument("o", "output", "output file, default stdout", false);
+        StringListArgument tools = new StringListArgument("g", "tools", "comma-separated list of generic tools to install", false);
         CharsetArgument charset = new CharsetArgument("e", "encoding", "encoding, default UTF-8", false);
 
-        ArgumentList arguments = new ArgumentList(about, help, templateFile, context, resourcePath, outputFile, charset, verbose);
+        ArgumentList arguments = new ArgumentList(about, help, templateFile, context, resourcePath, outputFile, charset, tools, verbose);
         CommandLine commandLine = new CommandLine(args);
         try
         {
@@ -231,6 +327,7 @@ public final class VelocityCommandLine implements Runnable {
                                     resourcePath.getValue(),
                                     templateFile.getValue(),
                                     outputFile.getValue(),
+                                    tools.getValue(),
                                     charset.getValue(StandardCharsets.UTF_8)).run();
         }
         catch (CommandLineParseException e) {
