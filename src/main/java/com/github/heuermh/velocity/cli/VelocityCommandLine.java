@@ -43,8 +43,12 @@ import com.google.common.collect.Maps;
 
 import org.apache.velocity.VelocityContext;
 
+import org.apache.velocity.context.Context;
+
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
+
+import org.apache.velocity.tools.ToolManager;
 
 import org.dishevelled.commandline.ArgumentList;
 import org.dishevelled.commandline.CommandLine;
@@ -76,7 +80,7 @@ public final class VelocityCommandLine implements Runnable {
     private final Charset charset;
 
     /** Velocity context. */
-    private final VelocityContext velocityContext;
+    private final Context velocityContext;
 
     /** Velocity engine. */
     private final VelocityEngine velocityEngine;
@@ -127,7 +131,8 @@ public final class VelocityCommandLine implements Runnable {
         this.outputFile = outputFile;
         this.charset = charset;
 
-        velocityContext = new VelocityContext();
+        ToolManager toolManager = new ToolManager(true);
+        velocityContext = toolManager.createContext();
 
         if (context != null) {
             Map<String, Object> map = Maps.newHashMap(Splitter.on(",").withKeyValueSeparator("=").split(context));
