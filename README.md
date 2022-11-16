@@ -16,6 +16,7 @@ velocity -t template.wm
   [-r /resource/path]
   [-o output.txt]
   [-e euc-jp]
+  [-g date,math]
   [--verbose]
 
 arguments:
@@ -26,5 +27,6 @@ arguments:
    -r, --resource [class java.io.File]  resource path [optional]
    -o, --output [class java.io.File]  output file, default stdout [optional]
    -e, --encoding [class java.nio.charset.Charset]  encoding, default UTF-8 [optional]
+   -g, --tools [java.util.List<java.lang.String>]  comma-separated list of generic tools to install [optional]
    -v, --verbose  display verbose log messages [optional]
 ```
