@@ -17,4 +17,7 @@
 /**
  * Command line interface to Apache Velocity.
  */
+@NullMarked
 package com.github.heuermh.velocity.cli;
+
+import org.jspecify.annotations.NullMarked;

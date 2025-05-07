@@ -33,10 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import javax.annotation.Nullable;
-import javax.annotation.ParametersAreNonnullByDefault;
-
-import javax.annotation.concurrent.Immutable;
+import org.jspecify.annotations.Nullable;
 
 import com.google.common.base.Splitter;
 
@@ -69,8 +66,6 @@ import org.slf4j.LoggerFactory;
 /**
  * Command line interface to Apache Velocity.
  */
-@Immutable
-@ParametersAreNonnullByDefault
 public final class VelocityCommandLine implements Runnable {
     /** Input template file. */
     private final File templateFile;
