@@ -21,7 +21,7 @@
   <parent>
     <groupId>org.dishevelled</groupId>
     <artifactId>dsh-parent</artifactId>
-    <version>61-SNAPSHOT</version>
+    <version>62</version>
   </parent>
   <groupId>com.github.heuermh.velocity</groupId>
   <artifactId>velocity-cli</artifactId>
